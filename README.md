@@ -1,1 +1,1 @@
-# final_project_cs50p
+# My final project repo
