@@ -2,10 +2,11 @@ import speech_recognition as sr
 import time
 import sys
 from fpdf import FPDF
+from pdf_types import GptPDF, NotesPDF
 
 DURATION = 20
 content = []
-terminate_recording = False  
+terminate_recording = False
 
 
 def callback(recognizer: sr.Recognizer, audio_data: sr.AudioData):
@@ -19,40 +20,61 @@ def callback(recognizer: sr.Recognizer, audio_data: sr.AudioData):
     except sr.RequestError as e:
         print('Errore nella richiesta del servizio di Google', e)
     else:
-        if isinstance(text, str) and 'termina la registrazione' in text:
+        if 'termina la registrazione' in text:
             terminate_recording = True
         content.append(text)
 
 
-def create_pdf():
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font(family='Helvetica', size=30)
-    return pdf
+def get_pdf_type():
+    pdf_type = input('Che tipo di file vuoi creare? ')
+    if pdf_type == 'notes':
+        return pdf_type
+    else:
+        raise ValueError(
+            'Puoi creare solo file di note o che sfruttano chatgpt')
 
 
-r = sr.Recognizer()
-m = sr.Microphone()
-
-with m as source:
-    r.adjust_for_ambient_noise(source)
-
-stop_recognition = r.listen_in_background(m, callback)
+def get_pdf_name():
+    return input('Che nome vuoi dare al tuo pdf? ')
 
 
-for _ in range(DURATION):
-    if terminate_recording:
-        sys.exit('Registrazione terminata')
-    time.sleep(1)
+def background_listening(mic: sr.Microphone, rec: sr.Recognizer):
+    with mic as source:
+        rec.adjust_for_ambient_noise(source)
+
+    stop_recognition = rec.listen_in_background(mic, callback)
+
+    for _ in range(DURATION):
+        if terminate_recording:
+            sys.exit('Registrazione terminata')
+        time.sleep(1)
+
+    stop_recognition()
 
 
-
-if len(content) != 0:
-    print('Building your pdf...')
-    pdf = create_pdf()
+def create_pdf(pdf_type, pdf_name):
+    print(content)
+    print('Costruendo il tuo pdf...')
+    text = ''
     for sentence in content:
-        pdf.cell(text=sentence)
-    pdf.output('output.pdf')
-    print('Pdf created successfully')
-else:
-    print('Google non ha sentito nulla')
+        text += sentence + ' '
+    if pdf_type == 'notes':
+        print(text)
+        print(pdf_name)
+        pdf = NotesPDF(text=text, name=pdf_name)
+        pdf.print_chapter()
+        pdf.output('example.pdf')
+        print('Pdf costruito con successo!')
+
+
+def main():
+    r = sr.Recognizer()
+    m = sr.Microphone()
+
+    pdf_type = get_pdf_type()
+    pdf_name = get_pdf_name()
+    background_listening(m, r)
+    create_pdf(pdf_name=pdf_name, pdf_type=pdf_type)
+
+
+main()
