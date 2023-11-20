@@ -1,4 +1,4 @@
-import sys
-
-
-print("Hello, my name is Jacopo")
+try:
+    s = input()
+except KeyboardInterrupt:
+    pass
