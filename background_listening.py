@@ -1,20 +1,69 @@
 import speech_recognition as sr
+from speech_recognition import Recognizer
 import time
 import sys
-from fpdf import FPDF
-from pdf_types import GptPDF, NotesPDF
 
-DURATION = 20
-content = []
 terminate_recording = False
+content = []
+
+
+class SpeechRecognitionUtils(Recognizer):
+    def __init__(self, microphone: sr.Microphone, duration):
+        self._duration = duration
+
+        assert isinstance(
+            microphone, sr.Microphone), 'Il microfono deve essere di tipo [sr.Microphone]'
+
+        self._microphone = microphone
+
+        super().__init__()
+
+    def background_listening(self, text_content: list()):
+        text_data = ''
+
+        with self._microphone as source:
+            print("Adattando il microfono per i rumori nell'ambiente...")
+            self.adjust_for_ambient_noise(source)
+
+        stop_recognition = self.listen_in_background(source, callback)
+
+        for _ in range(self._duration):
+            if terminate_recording:
+                text_content.clear()
+                sys.exit('Registrazione terminata')
+            time.sleep(1)
+
+        stop_recognition()
+
+        for sentence in text_content:
+            text_data += sentence + ' '
+
+        if len(text_content) != 0:
+            text_content.clear()
+
+        return text_data
+
+    def get_pdf_type(self, text_content):
+        print('Che tipo di pdf vuoi creare? ')
+
+        text = self.background_listening(text_content)
+
+        if 'note' in text:
+            return 'notes'
+        elif 'gpt' in text:
+            return 'gpt'
+        else:
+            raise ValueError(
+                'Puoi creare solo file di note o che sfruttano chatgpt')
 
 
 def callback(recognizer: sr.Recognizer, audio_data: sr.AudioData):
+    global content
     global terminate_recording
 
     try:
         text = recognizer.recognize_google(audio_data, language='it-IT')
-        print('Google ha sentito:', text)
+        # print('Google ha sentito:', text)
     except sr.UnknownValueError:
         print('Google non comprende quello che stai dicendo')
     except sr.RequestError as e:
@@ -25,56 +74,14 @@ def callback(recognizer: sr.Recognizer, audio_data: sr.AudioData):
         content.append(text)
 
 
-def get_pdf_type():
-    pdf_type = input('Che tipo di file vuoi creare? ')
-    if pdf_type == 'notes':
-        return pdf_type
-    else:
-        raise ValueError(
-            'Puoi creare solo file di note o che sfruttano chatgpt')
-
-
-def get_pdf_name():
-    return input('Che nome vuoi dare al tuo pdf? ')
-
-
-def background_listening(mic: sr.Microphone, rec: sr.Recognizer):
-    with mic as source:
-        rec.adjust_for_ambient_noise(source)
-
-    stop_recognition = rec.listen_in_background(mic, callback)
-
-    for _ in range(DURATION):
-        if terminate_recording:
-            sys.exit('Registrazione terminata')
-        time.sleep(1)
-
-    stop_recognition()
-
-
-def create_pdf(pdf_type, pdf_name):
-    print(content)
-    print('Costruendo il tuo pdf...')
-    text = ''
-    for sentence in content:
-        text += sentence + ' '
-    if pdf_type == 'notes':
-        print(text)
-        print(pdf_name)
-        pdf = NotesPDF(text=text, name=pdf_name)
-        pdf.print_chapter()
-        pdf.output('example.pdf')
-        print('Pdf costruito con successo!')
-
-
 def main():
-    r = sr.Recognizer()
+    global content
+
+    duration = 10
     m = sr.Microphone()
 
-    pdf_type = get_pdf_type()
-    pdf_name = get_pdf_name()
-    background_listening(m, r)
-    create_pdf(pdf_name=pdf_name, pdf_type=pdf_type)
+    utils = SpeechRecognitionUtils(m, duration)
+    print(utils.get_pdf_type(content))
 
 
 main()
