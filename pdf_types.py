@@ -1,4 +1,4 @@
-from fpdf import FPDF, FPDFException
+from fpdf import FPDF
 
 
 file_path = './text.txt'
