@@ -2,9 +2,8 @@ import speech_recognition as sr
 from speech_recognition import Recognizer
 import time
 import sys
-
-terminate_recording = False
-m = sr.Microphone()
+from openai_api_key import OPENAI_API_KEY
+from openai import OpenAI
 
 
 class BackgroundCalls(Recognizer):
@@ -48,18 +47,6 @@ class BackgroundCalls(Recognizer):
 
     # Inizio funzionalità di personalizzazione del pdf
 
-    def get_notes_title(self, duration=15, message='Che titolo vuoi dare alle tue note?'):
-        notes_title = self.background_listening(
-            duration, message).lower()
-
-        return notes_title.strip()
-
-    def get_prompt(self, duration=15, message='Che prompt vuoi dare a ChatGPT?'):
-        prompt = self.background_listening(
-            duration, message).lower()
-
-        return prompt.strip()
-
     def get_pdf_type(self, duration=10, message='Che tipo di pdf vuoi creare? '):
         text = self.background_listening(
             duration, message).lower()
@@ -95,6 +82,17 @@ class BackgroundCalls(Recognizer):
             else:
                 return pdf_name.strip()
 
+    def get_notes_title(self, duration=15, message='Che titolo vuoi dare alle tue note?'):
+        return self.background_listening(
+            duration, message).lower().strip()
+
+    def get_notes_body(self, duration=30, message='Detta la tue note'):
+        return self.background_listening(duration, message).strip()
+
+    def get_prompt(self, duration=15, message='Detta il tuo prompt'):
+        return self.background_listening(
+            duration, message).lower().strip()
+
 
 # Funzione chiamata dal thread in background
 def callback(recognizer: sr.Recognizer, audio_data: sr.AudioData):
@@ -107,20 +105,44 @@ def callback(recognizer: sr.Recognizer, audio_data: sr.AudioData):
         print('Google non comprende quello che stai dicendo')
     except sr.RequestError as e:
         print('Errore nella richiesta del servizio di Google', e)
+        terminate_recording = True
     except KeyboardInterrupt:
-        pass
+        terminate_recording = True
     else:
         if 'termina la registrazione' in text:
             terminate_recording = True
         calls.__dict__['_content'].append(text)
 
 
+m = sr.Microphone()
+terminate_recording = False
 calls = BackgroundCalls(m)
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+
+def synthesize_notes(notes: str):
+    prompt = {'role': 'user',
+              'content': f'I want you to summarize my notes. Here are my notes: {notes}'}
+
+    response = client.chat.completions.create(
+        model='gpt-3.5-turbo',
+        messages=[
+            {'role': 'system', 'content': 'You are an Italian teacher who wants to summarize a text, schematizing it and highlighting the most important parts. You are designed to output a JSON object.'},
+            prompt
+        ]
+    )
+
+    return response
+
+
+def get_response(prompt: str):
+    ...
 
 
 def main():
     print(calls.get_pdf_type())
-    print(calls.get_pdf_name())
+    notes = calls.get_notes_body()
+    print(synthesize_notes(notes))
 
 
 main()
