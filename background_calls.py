@@ -7,8 +7,13 @@ class BackgroundCalls(sr.Recognizer):
     _data = []
     _stop = False
     _mic = sr.Microphone()
+    _language = 'en'
 
-    def __init__(self, callback: function, translate_text: function):
+    """
+    The default language is english
+    """
+
+    def __init__(self, callback, translate_text):
         self._callback = callback
         self._translate_text = translate_text
 
@@ -19,10 +24,10 @@ class BackgroundCalls(sr.Recognizer):
 
         with self._mic as source:
             print(self._translate_text(
-                'Adapting the microphone for noises in the environment...'))
+                'Adapting the microphone for noises in the environment...', self._language))
             self.adjust_for_ambient_noise(source)
             print(self._translate_text(
-                'Microphone ready.'))
+                'Microphone ready.', self._language))
 
         print(message)
 
@@ -32,7 +37,7 @@ class BackgroundCalls(sr.Recognizer):
             if self._stop:
                 self._data.clear()
                 sys.exit(self._translate_text(
-                    'Registration finished.'))
+                    'Registration finished.', self._language))
             time.sleep(1)
 
         stop_recognition()

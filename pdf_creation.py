@@ -3,13 +3,7 @@ from pathvalidate import ValidationError, validate_filename
 
 
 class PdfCreation(BackgroundCalls):
-    def __init__(self, callback, translate_text: function):
-        self._language = 'en'
-
-        """
-        The default language is english
-        """
-
+    def __init__(self, callback, translate_text):
         super().__init__(callback=callback, translate_text=translate_text)
 
     def select_language(self, duration=10, message='Dictate in english the language you want to select.'):
@@ -75,3 +69,5 @@ class PdfCreation(BackgroundCalls):
     def get_prompt(self, duration=15, message='Dictate your prompt'):
         return self.background_listening(
             duration, self._translate_text(message, self._language)).strip()
+    
+
