@@ -30,7 +30,7 @@ def callback(recognizer, audio_data):
 
 def translate_text(text, language) -> str:
     return gt(target=language).translate(
-        text)
+        text).lower()
 
 
 def synthesize_notes(notes: str):

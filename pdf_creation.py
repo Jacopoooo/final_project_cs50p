@@ -1,4 +1,4 @@
-from background_calls import CreateCall
+from call_creation import CreateCall
 from pathvalidate import ValidationError, validate_filename
 
 
@@ -26,9 +26,8 @@ class PdfCreation(CreateCall):
 
         for key in self.LANGUAGES:
             if key in selected_language:
-                language_code = self.LANGUAGES[key]
-                self.language = language_code
-                return language_code
+                self.language = self.LANGUAGES[key]
+                return self.LANGUAGES[key]
 
         """
         Supported languages:
@@ -43,14 +42,13 @@ class PdfCreation(CreateCall):
         8) arabic: 'ar'
         9) spanish: 'es'
         10) german: 'de'
-
         """
 
     def get_pdf_type(self, duration=12, message='What type of pdf you want to create? '):
         text = self.background_listening(
             duration, self._translate_text(message, self.language)).lower()
 
-        if self._translate_text('notes', self.language).lower() in text:
+        if self._translate_text('notes', self.language) in text:
             return 'notes'
         elif 'gpt' in text or 'chatgpt' in text:
             return 'gpt'
